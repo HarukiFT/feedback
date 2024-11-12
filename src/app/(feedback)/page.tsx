@@ -316,7 +316,7 @@ const FeedbackPage = () => {
               </div>
             </div>
 
-            <div className="w-full">
+            <div className="w-full py-2.5">
               <Table>
                 <TableHeader>
                   <TableRow>
