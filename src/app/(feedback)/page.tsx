@@ -37,14 +37,7 @@ import { cn } from "@/lib/utils";
 import axios from "axios";
 import { CalendarIcon, Check, Star } from "lucide-react";
 import { useEffect, useState } from "react";
-import {
-  Area,
-  AreaChart,
-  Cell,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-} from "recharts";
+import { Area, AreaChart, Cell, Pie, PieChart } from "recharts";
 import { Tooltip, XAxis } from "recharts";
 import { CartesianGrid } from "recharts";
 import { Calendar } from "@/components/ui/calendar";
