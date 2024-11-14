@@ -1,10 +1,18 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   ChartConfig,
   ChartContainer,
+  ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import {
@@ -29,7 +37,14 @@ import { cn } from "@/lib/utils";
 import axios from "axios";
 import { CalendarIcon, Check, Star } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Area, AreaChart } from "recharts";
+import {
+  Area,
+  AreaChart,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+} from "recharts";
 import { Tooltip, XAxis } from "recharts";
 import { CartesianGrid } from "recharts";
 import { Calendar } from "@/components/ui/calendar";
@@ -65,6 +80,15 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
+const feedbackColors = {
+  троллинг: "hsl(var(--chart-6))",
+  вопрос: "hsl(var(--chart-5))",
+  предложение: "hsl(var(--chart-4))",
+  жалоба: "hsl(var(--chart-3))",
+  баг: "hsl(var(--chart-2))",
+  благодарность: "hsl(var(--chart-1))",
+};
+
 const FeedbackPage = () => {
   const [selectedType, setSelectedType] = useState<string>("");
   const [isOpen, setIsOpen] = useState(false);
@@ -73,6 +97,12 @@ const FeedbackPage = () => {
   const [toDate, setToDate] = useState<Date | undefined>(undefined);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(10);
+  const [types, setTypes] = useState<
+    {
+      count: number;
+      type: string;
+    }[]
+  >([]);
   const [data, setData] = useState<
     {
       sender: number;
@@ -93,8 +123,8 @@ const FeedbackPage = () => {
   useEffect(() => {
     axios
       .post(process.env.NEXT_PUBLIC_API_URL + "feedback/get", {
-        limit: 15,
-        page: 1,
+        limit: 10,
+        page: currentPage,
         filters: {
           type: selectedType.toLowerCase(),
           rating: selectedStar,
@@ -110,6 +140,17 @@ const FeedbackPage = () => {
 
   useEffect(() => {
     axios
+      .post(process.env.NEXT_PUBLIC_API_URL + "feedback/counts-by-type", {
+        startDate: fromDate,
+        endDate: toDate,
+      })
+      .then((response) => {
+        setTypes(response.data);
+      });
+  }, [fromDate, toDate]);
+
+  useEffect(() => {
+    axios
       .get(process.env.NEXT_PUBLIC_API_URL + "feedback/counts")
       .then((response) => {
         setMetrics(response.data);
@@ -117,7 +158,7 @@ const FeedbackPage = () => {
   }, []);
 
   return (
-    <div className="flex flex-col w-full h-full">
+    <div className="flex flex-col w-screen h-screen">
       <div className="flex-grow">
         <div className="grid grid-cols-6 gap-4 px-5">
           <div className="flex flex-col col-start-1 col-end-6 py-5">
@@ -323,7 +364,6 @@ const FeedbackPage = () => {
                     <TableHead>Отправитель</TableHead>
                     <TableHead>Тип</TableHead>
                     <TableHead>Текст</TableHead>
-                    <TableHead>Краткое содержание</TableHead>
                     <TableHead>Оценка</TableHead>
                     <TableHead>Дата</TableHead>
                   </TableRow>
@@ -331,16 +371,21 @@ const FeedbackPage = () => {
                 <TableBody>
                   {data.map((item, index) => (
                     <TableRow key={index}>
-                      <TableCell>{item.sender}</TableCell>
-                      <TableCell>{item.type}</TableCell>
-                      <TableCell className="overflow-auto">
-                        {item.text}
+                      <TableCell className="h-[50px] w-[3%]">
+                        {item.sender}
                       </TableCell>
-                      <TableCell className="overflow-auto">
-                        {item.summary}
+                      <TableCell className="h-[50px] w-[5%]">
+                        {item.type}
                       </TableCell>
-                      <TableCell>{item.rating}</TableCell>
-                      <TableCell>
+                      <TableCell className="h-[50px] w-[50%] max-h-[50px]">
+                        <div className="line-clamp-2 overflow-auto">
+                          {item.text}
+                        </div>
+                      </TableCell>
+                      <TableCell className="h-[50px] w-[5%]">
+                        {item.rating}
+                      </TableCell>
+                      <TableCell className="h-[50px]">
                         {new Date(item.timestamp).toLocaleDateString("ru-RU", {
                           year: "numeric",
                           month: "long",
@@ -357,6 +402,48 @@ const FeedbackPage = () => {
           </div>
           <div className="flex flex-col col-start-6 col-end-7 py-5">
             <h1 className="text-2xl font-bold">Feedback</h1>
+            <div className="w-full py-2.5">
+              <Card>
+                <Card className="flex flex-col">
+                  <CardHeader className="items-center pb-0">
+                    <CardTitle>Pie Chart</CardTitle>
+                    <CardDescription>
+                      Feedback Types Distribution
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex-1 pb-0">
+                    <ChartContainer
+                      config={chartConfig}
+                      className="mx-auto aspect-square max-h-[250px]"
+                    >
+                      <PieChart>
+                        <ChartTooltip
+                          cursor={false}
+                          content={<ChartTooltipContent hideLabel />}
+                        />
+                        <Pie data={types} dataKey="count" nameKey="type">
+                          {types.map((entry, index) => (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={
+                                feedbackColors[
+                                  entry.type as keyof typeof feedbackColors
+                                ]
+                              }
+                            />
+                          ))}
+                        </Pie>
+                      </PieChart>
+                    </ChartContainer>
+                  </CardContent>
+                  <CardFooter className="flex-col gap-2 text-sm">
+                    <div className="flex items-center gap-2 font-medium leading-none">
+                      Feedback types distribution
+                    </div>
+                  </CardFooter>
+                </Card>
+              </Card>
+            </div>
           </div>
         </div>
       </div>
